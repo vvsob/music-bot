@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 rodio = "0.17.3"
-rustube = { version = "0.6.0", features = ["blocking"] }

@@ -1,4 +1,8 @@
+mod track;
 pub mod channel;
+pub mod download;
+
+pub use track::TrackInfo;
 
 use channel::{Requester, Responder, TryRecvError};
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
@@ -6,23 +10,9 @@ use std::{
     collections::VecDeque,
     fs::File,
     io::BufReader,
-    path::{Path, PathBuf},
     thread,
     thread::JoinHandle,
 };
-
-#[derive(Debug, Clone)]
-pub struct TrackInfo {
-    pub path: PathBuf,
-}
-
-impl TrackInfo {
-    pub fn new(path: &Path) -> TrackInfo {
-        TrackInfo {
-            path: PathBuf::from(path),
-        }
-    }
-}
 
 #[derive(Debug, Clone)]
 enum WorkerRequest {
@@ -57,7 +47,7 @@ struct Worker {
 }
 
 fn get_source(track: TrackInfo) -> Decoder<BufReader<File>> {
-    let file = BufReader::new(File::open(track.path).unwrap());
+    let file = BufReader::new(File::open(&track.path).unwrap());
     Decoder::new(file).unwrap()
 }
 
