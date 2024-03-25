@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use teloxide::{prelude::*, utils::command::BotCommands};
 
-use crate::{player::MusicPlayer, download};
+use crate::{download, player::MusicPlayer};
 
 #[derive(BotCommands, Clone)]
 #[command(
@@ -41,17 +41,15 @@ impl TelegramBot {
         cmd: Command,
     ) -> Result<(), teloxide::RequestError> {
         match cmd {
-            Command::Play(url) => {
-                match download::download_from_youtube(&url) {
-                    Ok(track_info) => {
-                        player.lock().unwrap().enqueue(track_info);
-                        bot.send_message(msg.chat.id, "Added to the queue.").await?;
-                    },
-                    Err(_) => {
-                        bot.send_message(msg.chat.id, "Failed to download.").await?;
-                    }
+            Command::Play(url) => match download::download_from_youtube(&url) {
+                Ok(track_info) => {
+                    player.lock().unwrap().enqueue(track_info);
+                    bot.send_message(msg.chat.id, "Added to the queue.").await?;
                 }
-            }
+                Err(_) => {
+                    bot.send_message(msg.chat.id, "Failed to download.").await?;
+                }
+            },
             Command::Stop => {
                 player.lock().unwrap().stop();
                 bot.send_message(msg.chat.id, "Stopped.").await?;
