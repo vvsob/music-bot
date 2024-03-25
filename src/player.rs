@@ -1,13 +1,7 @@
 use crate::channel::{self, Requester, Responder, TryRecvError};
 use crate::track::TrackInfo;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
-use std::{
-    collections::VecDeque,
-    fs::File,
-    io::BufReader,
-    thread,
-    thread::JoinHandle,
-};
+use std::{collections::VecDeque, fs::File, io::BufReader, thread, thread::JoinHandle};
 
 #[derive(Debug, Clone)]
 enum WorkerRequest {
