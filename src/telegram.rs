@@ -48,7 +48,7 @@ impl TelegramBot {
                         bot.send_message(msg.chat.id, "Added to the queue.").await?;
                     },
                     Err(_) => {
-                        bot.send_message(msg.chat.id, format!("Failed to download.")).await?;
+                        bot.send_message(msg.chat.id, "Failed to download.").await?;
                     }
                 }
             }

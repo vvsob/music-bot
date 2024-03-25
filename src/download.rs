@@ -30,5 +30,5 @@ pub fn download_from_youtube(url: &str) -> Result<TrackInfo, DownloadError> {
         .replace('\n', "")
         + ".mp3";
 
-    Ok(TrackInfo::new(&Path::new(filename.as_str())))
+    Ok(TrackInfo::new(Path::new(filename.as_str())))
 }

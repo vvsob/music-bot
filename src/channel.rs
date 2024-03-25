@@ -40,10 +40,10 @@ impl<T, R> Responder<T, R> {
 
 pub fn channel<T, R>() -> (Requester<T, R>, Responder<T, R>) {
     let (requester_tx, responder_rx) = mpsc::channel();
-    return (
+    (
         Requester { tx: requester_tx },
         Responder { rx: responder_rx },
-    );
+    )
 }
 
 pub struct Request<T, R> {

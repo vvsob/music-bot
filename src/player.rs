@@ -37,7 +37,7 @@ struct Worker {
 }
 
 fn get_source(track: TrackInfo) -> Decoder<BufReader<File>> {
-    let file = BufReader::new(File::open(&track.path).unwrap());
+    let file = BufReader::new(File::open(track.path).unwrap());
     Decoder::new(file).unwrap()
 }
 
@@ -100,7 +100,7 @@ impl Worker {
 }
 
 impl MusicPlayer {
-    pub fn new() -> MusicPlayer {
+    pub fn build() -> MusicPlayer {
         let (requester, responder) = channel::channel();
         let _worker = thread::spawn(move || Worker::build(responder).main());
         MusicPlayer { requester, _worker }
