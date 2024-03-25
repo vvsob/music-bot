@@ -16,6 +16,7 @@ pub fn download_from_youtube(url: &str) -> Result<TrackInfo, DownloadError> {
             "--print",
             "%(id)s",
             "--no-simulate",
+            "--",
             url,
         ])
         .output()
