@@ -1,7 +1,10 @@
 use crate::track::TrackInfo;
 use std::{path::Path, process::Command};
 
-pub fn download_from_youtube(url: &str) -> TrackInfo {
+#[derive(Debug, Clone, Copy)]
+pub struct DownloadError;
+
+pub fn download_from_youtube(url: &str) -> Result<TrackInfo, DownloadError> {
     let output = Command::new("yt-dlp")
         .args([
             "-o",
@@ -16,10 +19,14 @@ pub fn download_from_youtube(url: &str) -> TrackInfo {
         .output()
         .unwrap();
 
+    if !output.stderr.is_empty() {
+        return Err(DownloadError);
+    }
+
     let filename = std::str::from_utf8(output.stdout.as_slice())
         .unwrap()
         .replace('\n', "")
         + ".mp3";
 
-    TrackInfo::new(&Path::new(filename.as_str()))
+    Ok(TrackInfo::new(&Path::new(filename.as_str())))
 }
