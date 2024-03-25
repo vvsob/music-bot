@@ -42,7 +42,6 @@ impl TelegramBot {
     ) -> Result<(), teloxide::RequestError> {
         match cmd {
             Command::Play(url) => {
-                println!("{}", url);
                 match download::download_from_youtube(&url) {
                     Ok(track_info) => {
                         player.lock().unwrap().enqueue(track_info);
