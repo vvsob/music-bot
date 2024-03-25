@@ -1,11 +1,7 @@
-use std::{
-    path::Path,
-    sync::{Arc, Mutex},
-};
-
+use std::sync::{Arc, Mutex};
 use teloxide::{prelude::*, utils::command::BotCommands};
 
-use crate::{player::MusicPlayer, TrackInfo};
+use crate::{player::MusicPlayer, download};
 
 #[derive(BotCommands, Clone)]
 #[command(
@@ -47,11 +43,15 @@ impl TelegramBot {
         match cmd {
             Command::Play(url) => {
                 println!("{}", url);
-                player
-                    .lock()
-                    .unwrap()
-                    .enqueue(TrackInfo::new(Path::new("8bB0FNGlrEs.mp3")));
-                bot.send_message(msg.chat.id, "Added to the queue.").await?;
+                match download::download_from_youtube(&url) {
+                    Ok(track_info) => {
+                        player.lock().unwrap().enqueue(track_info);
+                        bot.send_message(msg.chat.id, "Added to the queue.").await?;
+                    },
+                    Err(_) => {
+                        bot.send_message(msg.chat.id, format!("Failed to download.")).await?;
+                    }
+                }
             }
             Command::Stop => {
                 player.lock().unwrap().stop();

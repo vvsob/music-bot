@@ -1,5 +1,6 @@
-use crate::track::TrackInfo;
 use std::{path::Path, process::Command};
+
+use crate::track::TrackInfo;
 
 #[derive(Debug, Clone, Copy)]
 pub struct DownloadError;
@@ -14,12 +15,13 @@ pub fn download_from_youtube(url: &str) -> Result<TrackInfo, DownloadError> {
             "mp3",
             "--print",
             "%(id)s",
+            "--no-simulate",
             url,
         ])
         .output()
         .unwrap();
 
-    if !output.stderr.is_empty() {
+    if !output.stderr.is_empty() || output.stdout.is_empty() {
         return Err(DownloadError);
     }
 
