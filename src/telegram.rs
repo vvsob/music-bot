@@ -68,15 +68,17 @@ impl TelegramBot {
             }
             Command::List => {
                 let tracks = player.lock().unwrap().list_tracks();
-                bot.send_message(
-                    msg.chat.id,
-                    tracks
+                let message: String;
+                if tracks.is_empty() {
+                    message = String::from("The queue is empty.");
+                } else {
+                    message = tracks
                         .iter()
                         .map(|t| t.path.to_str().unwrap())
                         .collect::<Vec<&str>>()
-                        .join("\n"),
-                )
-                .await?;
+                        .join("\n");
+                }
+                bot.send_message(msg.chat.id, message).await?;
             }
         };
         Ok(())
