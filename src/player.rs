@@ -2,11 +2,11 @@ use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
 use std::{collections::VecDeque, fs::File, io::BufReader, thread, thread::JoinHandle};
 
 use crate::channel::{self, Requester, Responder, TryRecvError};
-use crate::track::TrackInfo;
+use crate::track::Track;
 
 #[derive(Debug, Clone)]
 enum WorkerRequest {
-    AddTrack(TrackInfo),
+    AddTrack(Track),
     Pause,
     Play,
     Stop,
@@ -16,7 +16,7 @@ enum WorkerRequest {
 
 #[derive(Debug, Clone)]
 enum WorkerResponse {
-    TrackList(VecDeque<TrackInfo>),
+    TrackList(VecDeque<Track>),
     None,
 }
 
@@ -32,11 +32,11 @@ struct Worker {
     _stream: OutputStream,
     _handle: OutputStreamHandle,
     sink: Sink,
-    queue: VecDeque<TrackInfo>,
+    queue: VecDeque<Track>,
     responder: Responder<WorkerRequest, WorkerResponse>,
 }
 
-fn get_source(track: TrackInfo) -> Decoder<BufReader<File>> {
+fn get_source(track: Track) -> Decoder<BufReader<File>> {
     let file = BufReader::new(File::open(track.path).unwrap());
     Decoder::new(file).unwrap()
 }
@@ -88,7 +88,7 @@ impl Worker {
     pub fn build(responder: Responder<WorkerRequest, WorkerResponse>) -> Worker {
         let (_stream, _handle) = OutputStream::try_default().unwrap();
         let sink = Sink::try_new(&_handle).unwrap();
-        let queue: VecDeque<TrackInfo> = VecDeque::new();
+        let queue: VecDeque<Track> = VecDeque::new();
         Worker {
             _stream,
             _handle,
@@ -106,7 +106,7 @@ impl MusicPlayer {
         MusicPlayer { requester, _worker }
     }
 
-    pub fn enqueue(&mut self, track: TrackInfo) {
+    pub fn enqueue(&mut self, track: Track) {
         self.requester.send(AddTrack(track)).unwrap();
     }
 
@@ -126,7 +126,7 @@ impl MusicPlayer {
         self.requester.send(Stop).unwrap();
     }
 
-    pub fn list_tracks(&self) -> VecDeque<TrackInfo> {
+    pub fn list_tracks(&self) -> VecDeque<Track> {
         let response = self.requester.send(ListTracks).unwrap();
         match response.recv().unwrap() {
             TrackList(tracks) => tracks,

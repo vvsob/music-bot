@@ -1,12 +1,12 @@
 use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
-pub struct TrackInfo {
+pub struct Track {
     pub path: PathBuf,
 }
 
-impl TrackInfo {
-    pub fn new(path: &Path) -> TrackInfo {
-        TrackInfo {
+impl Track {
+    pub fn new(path: &Path) -> Track {
+        Track {
             path: PathBuf::from(path),
         }
     }

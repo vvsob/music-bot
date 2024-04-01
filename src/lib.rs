@@ -5,4 +5,4 @@ pub mod player;
 pub mod telegram;
 mod track;
 
-pub use track::TrackInfo;
+pub use track::Track;
