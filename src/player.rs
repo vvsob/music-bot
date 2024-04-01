@@ -2,9 +2,9 @@ use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
 use std::{collections::VecDeque, fs::File, io::BufReader, thread, thread::JoinHandle};
 
 use crate::channel::{self, Requester, Responder, TryRecvError};
-use crate::track::Track;
+use crate::track::{Track, TrackInfo};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum WorkerRequest {
     AddTrack(Track),
     Pause,
@@ -14,9 +14,9 @@ enum WorkerRequest {
     ListTracks,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 enum WorkerResponse {
-    TrackList(VecDeque<Track>),
+    TrackList(VecDeque<TrackInfo>),
     None,
 }
 
@@ -25,7 +25,7 @@ use WorkerResponse::*;
 
 pub struct MusicPlayer {
     requester: Requester<WorkerRequest, WorkerResponse>,
-    _worker: JoinHandle<()>,
+    worker: Option<JoinHandle<()>>,
 }
 
 struct Worker {
@@ -33,10 +33,11 @@ struct Worker {
     _handle: OutputStreamHandle,
     sink: Sink,
     queue: VecDeque<Track>,
+    current: Option<Track>,
     responder: Responder<WorkerRequest, WorkerResponse>,
 }
 
-fn get_source(track: Track) -> Decoder<BufReader<File>> {
+fn get_source(track: &Track) -> Decoder<BufReader<File>> {
     let file = BufReader::new(File::open(track.file.get_path()).unwrap());
     Decoder::new(file).unwrap()
 }
@@ -59,28 +60,34 @@ impl Worker {
             Stop => {
                 self.sink.stop();
                 self.queue.clear();
+                self.current.take();
                 None
             }
             SkipOne => {
                 self.sink.skip_one();
+                self.current.take();
                 None
             }
-            ListTracks => TrackList(self.queue.clone()),
+            ListTracks => TrackList(self.queue.iter().map(|track| track.info.clone()).collect::<VecDeque<TrackInfo>>().clone()),
         }
     }
 
     pub fn main(&mut self) {
         loop {
             match self.responder.try_recv() {
-                Ok(req) => {
-                    let _ = req.respond(self.match_request(req.data.clone()));
+                Ok(mut req) => {
+                    let data = req.data.take().unwrap();
+                    let _ = req.respond(self.match_request(data));
                 }
                 Err(TryRecvError::Empty) => {}
                 Err(TryRecvError::Disconnected) => break,
             };
             if self.sink.empty() && !self.queue.is_empty() {
                 let next_track = self.queue.pop_front().unwrap();
-                self.sink.append(get_source(next_track));
+                self.sink.append(get_source(&next_track));
+                self.current = Some(next_track);
+            } else if self.sink.empty() {
+                self.current.take();
             }
         }
     }
@@ -94,6 +101,7 @@ impl Worker {
             _handle,
             sink,
             queue,
+            current: Option::None,
             responder,
         }
     }
@@ -102,8 +110,8 @@ impl Worker {
 impl MusicPlayer {
     pub fn build() -> MusicPlayer {
         let (requester, responder) = channel::channel();
-        let _worker = thread::spawn(move || Worker::build(responder).main());
-        MusicPlayer { requester, _worker }
+        let worker = thread::spawn(move || Worker::build(responder).main());
+        MusicPlayer { requester, worker: Some(worker) }
     }
 
     pub fn enqueue(&mut self, track: Track) {
@@ -126,11 +134,18 @@ impl MusicPlayer {
         self.requester.send(Stop).unwrap();
     }
 
-    pub fn list_tracks(&self) -> VecDeque<Track> {
+    pub fn list_tracks(&self) -> VecDeque<TrackInfo> {
         let response = self.requester.send(ListTracks).unwrap();
         match response.recv().unwrap() {
             TrackList(tracks) => tracks,
             r => panic!("On .list_tracks should get TrackList, not {:#?}.", r),
         }
+    }
+}
+
+impl Drop for MusicPlayer {
+    fn drop(&mut self) {
+        self.stop();
+        self.worker.take().unwrap().join().unwrap();
     }
 }

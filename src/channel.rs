@@ -12,11 +12,11 @@ impl<T, R> Requester<T, R> {
     pub fn send(&self, data: T) -> Result<Response<R>, SendError<T>> {
         let (response_tx, response_rx) = mpsc::channel();
         match self.tx.send(Request {
-            data,
+            data: Some(data),
             tx: response_tx,
         }) {
             Ok(_) => Ok(Response { rx: response_rx }),
-            Err(e) => Err(SendError(e.0.data)),
+            Err(e) => Err(SendError(e.0.data.unwrap())),
         }
     }
 }
@@ -47,7 +47,7 @@ pub fn channel<T, R>() -> (Requester<T, R>, Responder<T, R>) {
 }
 
 pub struct Request<T, R> {
-    pub data: T,
+    pub data: Option<T>,
     tx: Sender<R>,
 }
 
