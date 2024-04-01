@@ -1,6 +1,6 @@
 use std::{path::Path, process::Command};
 
-use crate::track::Track;
+use crate::{file::FileHandle, track::Track};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DownloadError;
@@ -32,5 +32,7 @@ pub fn download_from_youtube(url: &str) -> Result<Track, DownloadError> {
         .replace('\n', "")
         + ".mp3";
 
-    Ok(Track::new(Path::new(filename.as_str())))
+    let file_handle = FileHandle::new(Path::new(filename.as_str()));
+
+    Ok(Track::new(file_handle))
 }

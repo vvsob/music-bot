@@ -37,7 +37,7 @@ struct Worker {
 }
 
 fn get_source(track: Track) -> Decoder<BufReader<File>> {
-    let file = BufReader::new(File::open(track.path).unwrap());
+    let file = BufReader::new(File::open(track.file.get_path()).unwrap());
     Decoder::new(file).unwrap()
 }
 

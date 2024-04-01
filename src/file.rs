@@ -1,5 +1,5 @@
-use std::path::{Path, PathBuf};
 use std::fs;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct FileHandle {
@@ -11,6 +11,10 @@ impl FileHandle {
         FileHandle {
             path: PathBuf::from(path),
         }
+    }
+
+    pub fn get_path(&self) -> &Path {
+        &self.path
     }
 }
 

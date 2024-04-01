@@ -1,13 +1,12 @@
-use std::path::{Path, PathBuf};
+use crate::file::FileHandle;
+
 #[derive(Debug, Clone)]
 pub struct Track {
-    pub path: PathBuf,
+    pub file: FileHandle,
 }
 
 impl Track {
-    pub fn new(path: &Path) -> Track {
-        Track {
-            path: PathBuf::from(path),
-        }
+    pub fn new(file: FileHandle) -> Track {
+        Track { file }
     }
 }

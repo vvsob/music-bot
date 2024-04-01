@@ -74,7 +74,7 @@ impl TelegramBot {
                 } else {
                     message = tracks
                         .iter()
-                        .map(|t| t.path.to_str().unwrap())
+                        .map(|t| t.file.get_path().to_str().unwrap())
                         .collect::<Vec<&str>>()
                         .join("\n");
                 }
