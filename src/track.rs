@@ -2,12 +2,13 @@ use crate::file::FileHandle;
 
 #[derive(Debug, Clone)]
 pub struct TrackInfo {
+    pub url: String,
     pub name: String,
 }
 
 impl TrackInfo {
-    pub fn new(name: &str) -> TrackInfo {
-        TrackInfo { name: String::from(name) }
+    pub fn new(url: &str, name: &str) -> TrackInfo {
+        TrackInfo { url: url.to_string(), name: name.to_string() }
     }
 }
 

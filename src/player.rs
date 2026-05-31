@@ -1,5 +1,5 @@
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
-use std::{collections::VecDeque, fs::File, io::BufReader, thread, thread::JoinHandle};
+use std::{collections::VecDeque, fs::File, io::BufReader, thread, thread::JoinHandle, time};
 
 use crate::channel::{self, Requester, Responder, TryRecvError};
 use crate::track::{Track, TrackInfo};
@@ -16,7 +16,7 @@ enum WorkerRequest {
 
 #[derive(Debug)]
 enum WorkerResponse {
-    TrackList(VecDeque<TrackInfo>),
+    TrackList(Option<TrackInfo>, VecDeque<TrackInfo>),
     None,
 }
 
@@ -68,7 +68,12 @@ impl Worker {
                 self.current.take();
                 None
             }
-            ListTracks => TrackList(self.queue.iter().map(|track| track.info.clone()).collect::<VecDeque<TrackInfo>>().clone()),
+            ListTracks => { 
+                TrackList(
+                    self.current.as_ref().map(|track| track.info.clone()), 
+                    self.queue.iter().map(|track| track.info.clone()).collect::<VecDeque<TrackInfo>>().clone()
+                )
+            },
         }
     }
 
@@ -89,6 +94,7 @@ impl Worker {
             } else if self.sink.empty() {
                 self.current.take();
             }
+            thread::sleep(time::Duration::from_millis(100));
         }
     }
 
@@ -134,10 +140,10 @@ impl MusicPlayer {
         self.requester.send(Stop).unwrap();
     }
 
-    pub fn list_tracks(&self) -> VecDeque<TrackInfo> {
+    pub fn list_tracks(&self) -> (Option<TrackInfo>, VecDeque<TrackInfo>) {
         let response = self.requester.send(ListTracks).unwrap();
         match response.recv().unwrap() {
-            TrackList(tracks) => tracks,
+            TrackList(current, queue) => (current, queue),
             r => panic!("On .list_tracks should get TrackList, not {:#?}.", r),
         }
     }

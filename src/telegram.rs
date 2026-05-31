@@ -67,17 +67,20 @@ impl TelegramBot {
                 bot.send_message(msg.chat.id, "Skipped.").await?;
             }
             Command::List => {
-                let tracks = player.lock().unwrap().list_tracks();
-                let message: String;
-                if tracks.is_empty() {
-                    message = String::from("The queue is empty.");
-                } else {
-                    message = tracks
+                let (current, queue) = player.lock().unwrap().list_tracks();
+                let message = match current {
+                    None => "Nothing is playing.".to_string(),
+                    Some(track) => if queue.is_empty() { 
+                        format!("Currently playing: {} ({})", track.name, track.url) 
+                    } else {
+                        let queue_msg = queue
                         .iter()
-                        .map(|t| t.name.as_str())
-                        .collect::<Vec<&str>>()
+                        .map(|t| format!("{} ({})", t.name, t.url))
+                        .collect::<Vec<String>>()
                         .join("\n");
-                }
+                        format!("Currently playing: {} ({})\nQueue:\n{}", track.name, track.url, queue_msg)
+                    }
+                };
                 bot.send_message(msg.chat.id, message).await?;
             }
         };

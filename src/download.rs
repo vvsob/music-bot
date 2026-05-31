@@ -1,5 +1,7 @@
 use std::{path::Path, process::Command};
 
+use serde_json;
+
 use crate::{file::FileHandle, track::{Track, TrackInfo}};
 
 #[derive(Debug, Clone, Copy)]
@@ -37,11 +39,22 @@ pub fn download_from_youtube(url: &str) -> Result<Track, DownloadError> {
             "mp3",
             "--no-playlist",
             "--no-warnings",
+            "--write-info-json",
             "--",
             url,
         ])
         .output()
         .unwrap();
+
+    let info_filename = items[0].clone() + ".info.json";
+    let info_json = std::fs::read_to_string(&info_filename).unwrap();
+
+    let info: serde_json::Value = serde_json::from_str(&info_json).unwrap();
+    let title = info["title"].as_str().unwrap();
+
+    println!("{}", title);
+
+    std::fs::remove_file(info_filename).unwrap();
 
     if !output.stderr.is_empty() || output.stdout.is_empty() {
         println!("{}", std::str::from_utf8(output.stderr.as_slice()).unwrap());
@@ -50,7 +63,7 @@ pub fn download_from_youtube(url: &str) -> Result<Track, DownloadError> {
     }
 
     let file_handle = FileHandle::new(Path::new(filename.as_str()));
-    let info = TrackInfo::new(&filename);
+    let info = TrackInfo::new(&format!("https://youtu.be/{}", items[0]), title);
 
     Ok(Track::new(info, file_handle))
 }
