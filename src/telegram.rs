@@ -41,13 +41,20 @@ impl TelegramBot {
         cmd: Command,
     ) -> Result<(), teloxide::RequestError> {
         match cmd {
-            Command::Play(url) => match download::download_from_youtube(&url) {
-                Ok(track_info) => {
-                    player.lock().unwrap().enqueue(track_info);
-                    bot.send_message(msg.chat.id, "Added to the queue.").await?;
-                }
-                Err(_) => {
-                    bot.send_message(msg.chat.id, "Failed to download.").await?;
+            Command::Play(url) => {
+                let reply_future = bot.send_message(msg.chat.id, "Downloading...").send();
+                let download_future = download::download_from_youtube(&url);
+                let (reply_result, download_result) = tokio::join!(reply_future, download_future);
+                let reply = reply_result?;
+                match download_result {
+                    Ok(track) => {
+                        let name = track.info.name.clone();
+                        player.lock().unwrap().enqueue(track);
+                        bot.edit_message_text(msg.chat.id, reply.id, format!("Added to the queue: {}", name)).await?;
+                    }
+                    Err(_) => {
+                        bot.edit_message_text(msg.chat.id, reply.id, "Failed to download.").await?;
+                    }
                 }
             },
             Command::Stop => {

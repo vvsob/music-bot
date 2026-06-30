@@ -1,13 +1,14 @@
-use std::{path::Path, process::Command};
+use std::{path::Path};
 
 use serde_json;
+use tokio::process::Command;
 
 use crate::{file::FileHandle, track::{Track, TrackInfo}};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DownloadError;
 
-pub fn download_from_youtube(url: &str) -> Result<Track, DownloadError> {
+pub async fn download_from_youtube(url: &str) -> Result<Track, DownloadError> {
     let output = Command::new("yt-dlp")
         .args([
             "--print",
@@ -16,9 +17,13 @@ pub fn download_from_youtube(url: &str) -> Result<Track, DownloadError> {
             "--no-warnings",
             "--",
             url,
-        ]).output().unwrap();
+        ]).output().await.unwrap();
 
     let items: Vec<String> = std::str::from_utf8(&output.stdout).unwrap().split(' ').map(|s| s.replace("\n", "")).collect();
+
+    if items.len() < 2 {
+        return Err(DownloadError);        
+    }
 
     let filename = items[0].clone() + ".mp3";
     let duration: u32 = items[1].parse().unwrap();
@@ -43,8 +48,7 @@ pub fn download_from_youtube(url: &str) -> Result<Track, DownloadError> {
             "--",
             url,
         ])
-        .output()
-        .unwrap();
+        .output().await.unwrap();
 
     let info_filename = items[0].clone() + ".info.json";
     let info_json = std::fs::read_to_string(&info_filename).unwrap();
