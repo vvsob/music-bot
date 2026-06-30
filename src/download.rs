@@ -61,10 +61,21 @@ pub async fn download_from_youtube(url: &str) -> Result<Track, DownloadError> {
     std::fs::remove_file(info_filename).unwrap();
 
     if !output.stderr.is_empty() || output.stdout.is_empty() {
-        println!("{}", std::str::from_utf8(output.stderr.as_slice()).unwrap());
-        println!("{}", std::str::from_utf8(output.stdout.as_slice()).unwrap());
+        println!("===== Stderr\n{}", std::str::from_utf8(output.stderr.as_slice()).unwrap());
+        println!("===== Stdout\n{}", std::str::from_utf8(output.stdout.as_slice()).unwrap());
         return Err(DownloadError);
     }
+
+    let _ = Command::new("uvx")
+        .args([
+            "ffmpeg-normalize",
+            &filename,
+            "-ofmt",
+            "mp3",
+            "-o",
+            &filename,
+            "-f"
+        ]).output().await.unwrap();
 
     let file_handle = FileHandle::new(Path::new(filename.as_str()));
     let info = TrackInfo::new(&format!("https://youtu.be/{}", items[0]), title);
