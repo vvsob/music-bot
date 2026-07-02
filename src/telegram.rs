@@ -1,7 +1,8 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use teloxide::{prelude::*, utils::command::BotCommands};
 
-use crate::{download, player::MusicPlayer};
+use crate::{download::{Downloader}, player::{MusicPlayer}};
 
 #[derive(BotCommands, Clone)]
 #[command(
@@ -23,14 +24,9 @@ enum Command {
     List,
 }
 
-#[derive(Clone, Default)]
-enum State {
-    #[default]
-    Start,
-}
-
 pub struct TelegramBot {
     player: Arc<Mutex<MusicPlayer>>,
+    downloader: Arc<Mutex<Downloader>>,
 }
 
 impl TelegramBot {
@@ -38,18 +34,20 @@ impl TelegramBot {
         bot: Bot,
         msg: Message,
         player: Arc<Mutex<MusicPlayer>>,
+        downloader: Arc<Mutex<Downloader>>,
         cmd: Command,
     ) -> Result<(), teloxide::RequestError> {
         match cmd {
             Command::Play(url) => {
                 let reply_future = bot.send_message(msg.chat.id, "Downloading...").send();
-                let download_future = download::download_from_youtube(&url);
+                let mut downloader_ref = downloader.lock().await; 
+                let download_future = downloader_ref.download_from_youtube(&url);
                 let (reply_result, download_result) = tokio::join!(reply_future, download_future);
                 let reply = reply_result?;
                 match download_result {
                     Ok(track) => {
                         let name = track.info.name.clone();
-                        player.lock().unwrap().enqueue(track);
+                        player.lock().await.enqueue(track);
                         bot.edit_message_text(msg.chat.id, reply.id, format!("Added to the queue: {}", name)).await?;
                     }
                     Err(_) => {
@@ -58,23 +56,23 @@ impl TelegramBot {
                 }
             },
             Command::Stop => {
-                player.lock().unwrap().stop();
+                player.lock().await.stop();
                 bot.send_message(msg.chat.id, "Stopped.").await?;
             }
             Command::Pause => {
-                player.lock().unwrap().pause();
+                player.lock().await.pause();
                 bot.send_message(msg.chat.id, "Paused.").await?;
             }
             Command::Resume => {
-                player.lock().unwrap().play();
+                player.lock().await.play();
                 bot.send_message(msg.chat.id, "Resumed.").await?;
             }
             Command::Skip => {
-                player.lock().unwrap().skip_one();
+                player.lock().await.skip_one();
                 bot.send_message(msg.chat.id, "Skipped.").await?;
             }
             Command::List => {
-                let (current, queue) = player.lock().unwrap().list_tracks();
+                let (current, queue) = player.lock().await.list_tracks();
                 let message = match current {
                     None => "Nothing is playing.".to_string(),
                     Some(track) => if queue.is_empty() { 
@@ -108,7 +106,7 @@ impl TelegramBot {
                     .endpoint(Self::handle_command),
             ),
         )
-        .dependencies(dptree::deps![self.player.clone()])
+        .dependencies(dptree::deps![self.player.clone(), self.downloader.clone()])
         .build()
         .dispatch()
         .await;
@@ -125,6 +123,7 @@ impl TelegramBot {
     pub fn build(player: MusicPlayer) -> TelegramBot {
         TelegramBot {
             player: Arc::new(Mutex::new(player)),
+            downloader: Arc::new(Mutex::new(Downloader::new()))
         }
     }
 }
