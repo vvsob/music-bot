@@ -10,6 +10,8 @@ use crate::{download::{Downloader}, player::{MusicPlayer}};
     description = "These commands are supported:"
 )]
 enum Command {
+    #[command(description = "show start message")]
+    Start,
     #[command(description = "play youtube url.")]
     Play(String),
     #[command(description = "stop playing.")]
@@ -38,6 +40,9 @@ impl TelegramBot {
         cmd: Command,
     ) -> Result<(), teloxide::RequestError> {
         match cmd {
+            Command::Start => {
+                bot.parse_mode(teloxide::types::ParseMode::MarkdownV2).send_message(msg.chat.id, "This bot plays music\\!\nUse `/play <youtube url>` to play anything").await?;
+            }
             Command::Play(url) => {
                 let reply_future = bot.send_message(msg.chat.id, "Downloading...").send();
                 let mut downloader_ref = downloader.lock().await; 
